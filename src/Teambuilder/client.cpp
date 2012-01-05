@@ -295,6 +295,7 @@ void Client::sortChannelsToggle(bool newvalue)
     s.setValue("sort_channels_by_name", newvalue);
 
     sortCBN = newvalue;
+
     if(sortCBN) {
         sortChannels();
     }
@@ -475,6 +476,9 @@ void Client::addChannel(const QString &name, int id)
     channelNames.insert(id, name);
     channelByNames.insert(name.toLower(),id);
     channels->addItem(new QIdListWidgetItem(id, greychatot, name));
+    if(sortCBN) {
+        sortChannels();
+    }
 }
 
 void Client::channelNameChanged(int id, const QString &name)
@@ -499,6 +503,10 @@ void Client::channelNameChanged(int id, const QString &name)
     if (hasChannel(id)) {
         channel(id)->setName(name);
     }
+
+    if(sortCBN) {
+        sortChannels();
+    }
 }
 
 void Client::removeChannel(int id)
@@ -513,6 +521,7 @@ void Client::removeChannel(int id)
 
     QString chanName = channelNames.take(id);
     channelByNames.remove(chanName.toLower());
+
 }
 
 void Client::leaveChannelR(int index)
