@@ -15,6 +15,7 @@
 
 #include "../PokemonInfo/pokemonstructs.h"
 #include "sessiondatafactory.h"
+#include "scriptdb.h"
 
 class Server;
 class ChallengeInfo;
@@ -330,6 +331,7 @@ private:
     QTimer * step_timer;
     QVector<bool> stopevents;
     SessionDataFactory *mySessionDataFactory;
+    ScriptDb *myScriptDb;
 
     QNetworkAccessManager manager;
     QHash<QTimer*,QString> timerEvents;

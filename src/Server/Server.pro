@@ -33,6 +33,7 @@ SOURCES += main.cpp \
     tiertree.cpp \
     tiermachine.cpp \
     sessiondatafactory.cpp \
+    scriptdb.cpp \
     battlepluginstruct.cpp \
     battlecounters.cpp \
     moves/moves1.cpp
@@ -85,6 +86,7 @@ HEADERS += player.h \
     ../Utilities/mtrand.h \
     miscmoves.h \
     sessiondatafactory.h \
+    scriptdb.h \
     battleinterface.h \
     battlepluginstruct.h \
     miscabilities.h \

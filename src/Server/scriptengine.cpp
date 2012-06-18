@@ -31,6 +31,18 @@ ScriptEngine::ScriptEngine(Server *s) {
     );
 
 #ifndef PO_SCRIPT_SAFE_ONLY
+    myScriptDb = new ScriptDb(&myengine);
+
+    QScriptValue db = myengine.newQObject(myScriptDb);
+    QScriptValue execFun = myengine.newFunction(ScriptDb::execute);
+    db.setProperty("execute", execFun);
+    sys.setProperty(
+        "db",
+        db,
+        QScriptValue::ReadOnly | QScriptValue::Undeletable
+    );
+
+
     connect(&manager, SIGNAL(finished(QNetworkReply*)), SLOT(webCall_replyFinished(QNetworkReply*)));
 #endif
 
@@ -48,6 +60,7 @@ ScriptEngine::ScriptEngine(Server *s) {
 ScriptEngine::~ScriptEngine()
 {
     delete mySessionDataFactory;
+    delete myScriptDb;
 }
 
 void ScriptEngine::changeScript(const QString &script, const bool triggerStartUp)
@@ -726,7 +739,7 @@ void ScriptEngine::callLater(const QString &expr, int delay)
     if (delay <= 0) {
         return;
     }
-	//qDebug() << "Call Later in " << delay << expr;
+    //qDebug() << "Call Later in " << delay << expr;
     QTimer *t = new QTimer();
 
     timerEvents[t] = expr;
@@ -751,9 +764,9 @@ void ScriptEngine::callQuickly(const QString &expr, int delay)
 
 void ScriptEngine::timer()
 {
-	//qDebug() << "timer()";
+    //qDebug() << "timer()";
     QTimer *t = (QTimer*) sender();
-	//qDebug() << timerEvents[t];
+    //qDebug() << timerEvents[t];
     eval(timerEvents[t]);
 
     timerEvents.remove(t);
@@ -1202,8 +1215,8 @@ QScriptValue ScriptEngine::indexOfTeamPoke(int id, int pokenum)
 
 bool ScriptEngine::hasDreamWorldAbility(int id, int index)
 {
-	if (myserver->player(id)->team().gen < 5)
-		return false;
+    if (myserver->player(id)->team().gen < 5)
+        return false;
     if (!loggedIn(id) || index < 0 || index >= 6) {
         return false;
     } else {
@@ -1474,7 +1487,7 @@ double ScriptEngine::rand(double min, double max)
 {
     if (min == max)
         return min;
-	return ::floor(myengine.globalObject().property("Math").property("random").call().toNumber() * (max - min) + min);
+    return ::floor(myengine.globalObject().property("Math").property("random").call().toNumber() * (max - min) + min);
 }
 
 int ScriptEngine::numPlayers()
