@@ -902,12 +902,18 @@ QScriptValue ScriptEngine::tier(int id)
 
 QScriptValue ScriptEngine::ranking(int id)
 {
+    if (!testPlayer("ranking(id)",id)) { 
+       return myengine.undefinedValue(); 
+    }
     Player *p = myserver->player(id);
     return ranking(p->name(), p->tier());
 }
 
 QScriptValue ScriptEngine::ratedBattles(int id)
 {
+    if (!testPlayer("ratedBattles(id)",id)) { 
+        return myengine.undefinedValue(); 
+    }	
     Player *p = myserver->player(id);
     return ratedBattles(p->name(), p->tier());
 }
