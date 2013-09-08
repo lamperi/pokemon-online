@@ -65,7 +65,8 @@ SOURCES += main.cpp \
     downloadmanager.cpp \
     Teambuilder/teambuilderwidget.cpp \
     Teambuilder/pokedex.cpp \
-    Teambuilder/pokedexpokeselection.cpp
+    Teambuilder/pokedexpokeselection.cpp \
+    battlesounds.cpp
 
 HEADERS += ../PokemonInfo/pokemonstructs.h \
     ../PokemonInfo/battlestructs.h \
@@ -148,15 +149,22 @@ HEADERS += ../PokemonInfo/pokemonstructs.h \
     ../PokemonInfo/geninfo.h \
     ../PokemonInfo/pokemon.h \
     Teambuilder/pokedex.h \
-    Teambuilder/pokedexpokeselection.h
+    Teambuilder/pokedexpokeselection.h \
+    battlesounds.h
 
 contains(QT_VERSION, ^5\\.[0-9]\\..*) {
   DEFINES += QT5
   QT += widgets multimedia concurrent
   CONFIG += c++11
+
+  SOURCES += qtbattlesounds.cpp 
+  HEADERS += qtbattlesounds.h
 } else {
   QT += phonon
   QMAKE_CXXFLAGS += "-std=c++0x -U__STRICT_ANSI__"
+
+  SOURCES += qt4battlesounds.cpp 
+  HEADERS += qt4battlesounds.h
 }
 
 

@@ -8,13 +8,7 @@
 #include "../BattleManager/battledatatypes.h"
 #include "../BattleManager/battlecommandmanager.h"
 
-#ifdef QT5
-#include <QMediaPlayer>
-#include <QAudioOutput>
-#else
-#include <phonon/mediaobject.h>
-#include <phonon/audiooutput.h>
-#endif
+#include "battlesounds.h"
 
 class BaseBattleDisplay;
 class QScrollDownTextBrowser;
@@ -53,8 +47,6 @@ class BaseBattleWindow : public BaseBattleWindowInterface
 
     PROPERTY(int, ownid)
     PROPERTY(bool, started)
-    PROPERTY(bool, playBattleCries)
-    PROPERTY(bool, playBattleMusic)
     PROPERTY(FullBattleConfiguration, conf)
 public:
     BaseBattleInfo *myInfo;
@@ -97,7 +89,6 @@ public:
     void onSpectatorLeave(int id);
     void onBattleEnd(int res, int winner);
 
-    bool musicPlayed() const;
     bool flashWhenMoved() const;
     virtual void disable();
 
@@ -107,21 +98,13 @@ public slots:
 
     void sendMessage();
     void clickClose();
+    void delayNone();
     void delay(qint64 msec=0);
     void undelay();
-    void playCry(int pokemon);
     void changeCryVolume(int);
     void changeMusicVolume(int);
 
     void ignoreSpectators();
-
-    void musicPlayStop();
-    void enqueueMusic();
-#ifdef QT5
-    void criesProblem(QAudio::State newState);
-#else
-    void criesProblem(Phonon::State newState);
-#endif
 protected:
     int ignoreSpecs;
 
@@ -139,27 +122,6 @@ protected:
     QCheckBox *saveLogs;
     QCheckBox *musicOn;
     QCheckBox *flashWhenMoveDone;
-
-#ifdef QT5
-    QMediaPlayer *audio;
-    QAudioOutput *cry;
-#else
-    /* The device which outputs the sound */
-    Phonon::AudioOutput *audioOutput;
-    /* The media the device listens from */
-    Phonon::MediaObject *mediaObject;
-    /* The device for cries */
-    Phonon::AudioOutput *cryOutput;
-    /* The media the device listens from for pokemon cries */
-    Phonon::MediaObject * cryObject;
-#endif
-    /* The media sources for the music */
-    QList<QString> sources;
-
-    /* The pokemon cries stored in memory */
-    QHash<int, QByteArray> cries;
-    QBuffer cryBuffer;
-    bool undelayOnSounds;
 
     QSet<int> spectators;
 
@@ -183,6 +145,8 @@ protected:
     void addReplayData(const QByteArray &inf);
 
     void closeEvent(QCloseEvent *);
+
+    BattleSounds *battleSounds;
 };
 
 class BaseBattleWindowIns : public BaseBattleWindow, public BattleCommandManager<BaseBattleWindowIns>

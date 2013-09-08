@@ -13,8 +13,14 @@
 #ifdef QT5
 #include <QApplication>
 #include <QToolTip>
-#include <QMediaPlayer>
-#include "../Utilities/wavreader.h"
+#endif
+
+#ifdef QT5
+#include "qtbattlesounds.h"
+typedef QtBattleSounds BattleSoundsImpl;
+#else
+#include "qt4battlesounds.h"
+typedef Qt4BattleSounds BattleSoundsImpl;
 #endif
 
 using namespace BattleCommands;
@@ -64,6 +70,10 @@ BaseBattleWindow::BaseBattleWindow()
     ignoreSpecs=NoIgnore;
 }
 
+void BaseBattleWindow::delayNone() {
+    delay();
+}
+
 void BaseBattleWindow::delay(qint64 msec)
 {
     /* The dynamic cast works if called from BaseBattleWindowIns */
@@ -99,11 +109,7 @@ void BaseBattleWindow::init()
         ptr->deletable = false;
     }
 
-    QObject *ptr2 = dynamic_cast<QObject*>(getBattle());
 
-    if (ptr2) {
-        connect(ptr2, SIGNAL(playCry(int)), SLOT(playCry(int)));
-    }
 
     info().data = &data();
 
@@ -154,7 +160,6 @@ void BaseBattleWindow::init()
     buttons->addWidget(myclose = new QPushButton(tr("&Close")));
     buttons->addWidget(myignore = new QPushButton(tr("&Ignore spectators")));
 
-    connect(musicOn, SIGNAL(toggled(bool)), SLOT(musicPlayStop()));
     connect(myignore, SIGNAL(clicked()), SLOT(ignoreSpectators()));
     connect(myclose, SIGNAL(clicked()), SLOT(clickClose()));
     connect(myline, SIGNAL(returnPressed()), this, SLOT(sendMessage()));
@@ -162,36 +167,21 @@ void BaseBattleWindow::init()
 
     loadSettings(this);
 
-#ifdef QT5
-    audio = new QMediaPlayer(this);
+    battleSounds = new BattleSoundsImpl(this);
+    //connect(battleSounds, &BattleSounds::soundsPlaying, this, &BaseBattleWindow::delayNone);
+    //connect(battleSounds, &BattleSounds::soundsDone, this, &BaseBattleWindow::undelay);
+    //connect(musicOn, &QCheckBox::toggled, battleSounds, &BattleSounds::toggleSounds);
+    connect(battleSounds, SIGNAL(soundsPlaying()), SLOT(delay()));
+    connect(battleSounds, SIGNAL(soundsDone()), SLOT(undelay()));
+    connect(musicOn, SIGNAL(toggled(bool)), battleSounds, SLOT(toggleSounds(bool)));
 
-    cry = new QAudioOutput(QAudioFormat(), this);
+    QObject *ptr2 = dynamic_cast<QObject*>(getBattle());
 
-    connect(audio, SIGNAL(stateChanged(QMediaPlayer::State)), SLOT(enqueueMusic()));
-    connect(cry, SIGNAL(stateChanged(QAudio::State)), SLOT(criesProblem(QAudio::State)));
-#else
-    audioOutput = new Phonon::AudioOutput(Phonon::MusicCategory, this);
-    mediaObject = new Phonon::MediaObject(this);
+    if (ptr2) {
+        connect(ptr2, SIGNAL(playCry(int)), battleSounds, SLOT(playCry(int)));
+    }
 
-    cryOutput = new Phonon::AudioOutput(Phonon::GameCategory, this);
-    cryObject = new Phonon::MediaObject(this);
-
-    /* To link both */
-    Phonon::createPath(mediaObject, audioOutput);
-    Phonon::createPath(cryObject, cryOutput);
-
-    connect(mediaObject, SIGNAL(aboutToFinish()), this, SLOT(enqueueMusic()));
-    connect(cryObject, SIGNAL(stateChanged(Phonon::State,Phonon::State)), this, SLOT(criesProblem(Phonon::State)));
-#endif
-
-    undelayOnSounds = true;
-
-    musicPlayStop();
-}
-
-bool BaseBattleWindow::musicPlayed() const
-{
-    return musicOn->isChecked();
+    battleSounds->toggleSounds(musicOn->isChecked());
 }
 
 bool BaseBattleWindow::flashWhenMoved() const
@@ -201,162 +191,12 @@ bool BaseBattleWindow::flashWhenMoved() const
 
 void BaseBattleWindow::changeCryVolume(int v)
 {
-#ifdef QT5
-    cry->setVolume(float(v)/100);
-#else
-    cryOutput->setVolume(float(v)/100);
-#endif
+    battleSounds->setCryVolume(v);
 }
 
 void BaseBattleWindow::changeMusicVolume(int v)
 {
-#ifdef QT5
-    audio->setVolume(v);
-#else
-    audioOutput->setVolume(float(v)/100);
-#endif
-}
-
-void BaseBattleWindow::musicPlayStop()
-{
-    if (!musicPlayed()) {
-        playBattleCries() = false;
-        playBattleMusic() = false;
-#ifdef QT5
-        audio->pause();
-#else
-        mediaObject->pause();
-#endif
-        return;
-    }
-
-    QSettings s;
-#ifdef QT5
-    audio->setVolume(s.value("BattleAudio/MusicVolume").toInt());
-    cry->setVolume(float(s.value("BattleAudio/CryVolume").toInt())/100);
-#else
-    audioOutput->setVolume(float(s.value("BattleAudio/MusicVolume").toInt())/100);
-    cryOutput->setVolume(float(s.value("BattleAudio/CryVolume").toInt())/100);
-#endif
-
-    if (musicPlayed()) {
-        playBattleCries() = s.value("BattleAudio/PlaySounds").toBool();
-        playBattleMusic() = s.value("BattleAudio/PlayMusic").toBool() || !s.value("play_battle_cries").toBool();
-    }
-
-    if (!playBattleMusic()) {
-        return;
-    }
-
-    /* If more than 5 songs, start with a new music, otherwise carry on where it left. */
-    QDir directory = QDir(s.value("BattleAudio/MusicDirectory").toString());
-    QStringList files = directory.entryList(QStringList() << "*.mp3" << "*.ogg" << "*.wav" << "*.it" << "*.mid" << "*.m4a" << "*.mp4",
-                                            QDir::Files | QDir::NoSymLinks | QDir::Readable, QDir::Name);
-
-    QStringList tmpSources;
-
-    foreach(QString file, files) {
-        tmpSources.push_back(directory.absoluteFilePath(file));
-    }
-
-    /* If it's the same musics as before with only 1 file, we start playing again the paused file (would not be nice to restart from the
-        start). Otherwise, a random file will be played from the start */
-    if (tmpSources == sources && sources.size() == 1) {
-#ifdef QT5
-        audio->play();
-#else
-        mediaObject->play();
-#endif
-        return;
-    }
-
-    sources = tmpSources;
-
-    if (sources.size() == 0)
-        return;
-
-#ifdef QT5
-    audio->setMedia(QUrl::fromLocalFile(sources[true_rand()%sources.size()]));
-    audio->play();
-#else
-    mediaObject->setCurrentSource(sources[true_rand()%sources.size()]);
-    mediaObject->play();
-#endif
-
-}
-
-void BaseBattleWindow::enqueueMusic()
-{
-    if (sources.size() == 0)
-        return;
-    QString url = sources[true_rand()%sources.size()];
-#ifdef QT5
-    if (audio->state() != QMediaPlayer::PlayingState && musicPlayed()) {
-        audio->setMedia(QUrl::fromLocalFile(url));
-        audio->play();
-    }
-#else
-    mediaObject->enqueue(url);
-#endif
-}
-
-#ifdef QT5
-void BaseBattleWindow::criesProblem(QAudio::State newState) {
-    if (newState != QAudio::ActiveState && undelayOnSounds) {
-        undelay();
-    }
-}
-
-#else
-void BaseBattleWindow::criesProblem(Phonon::State newState)
-{
-    /* Phonon is really unundertandable, we can't use the code commented out */
-    //    if ((newState == Phonon::ErrorState || newState == Phonon::StoppedState || newState == Phonon::PausedState) && undelayOnSounds) {
-    //        undelay();
-    //    }
-    if (newState != Phonon::PlayingState && newState != Phonon::LoadingState && undelayOnSounds) {
-        undelay();
-    }
-}
-#endif
-
-void BaseBattleWindow::playCry(int pokemon)
-{
-    if (!playBattleCries())
-        return;
-
-    delay();
-
-    pokemon = Pokemon::uniqueId(pokemon).pokenum;
-
-    if (!cries.contains(pokemon)) {
-        cries.insert(pokemon, PokemonInfo::Cry(pokemon));
-    }
-
-    undelayOnSounds = false;
-#ifdef QT5
-    cry->stop();
-#else
-    cryObject->stop();
-#endif
-    undelayOnSounds = true;
-
-    cryBuffer.close();
-    cryBuffer.setBuffer(&cries[pokemon]);
-    cryBuffer.open(QIODevice::ReadOnly);
-#ifdef QT5
-    cry->deleteLater();
-    cry = new QAudioOutput(readWavHeader(&cryBuffer), this);
-    connect(cry, SIGNAL(stateChanged(QAudio::State)), SLOT(criesProblem(QAudio::State)));
-    cry->setBufferSize(cries[pokemon].size());
-    cry->start(&cryBuffer);
-#else
-    cryObject->setCurrentSource(&cryBuffer);
-    cryObject->play();
-#endif
-
-    /* undelay() will automatically be called when the cryObject stops --
-        signal/slot connection in BaseBattleWindow::init() */
+    battleSounds->setMusicVolume(v);
 }
 
 int BaseBattleWindow::player(int spot) const
@@ -530,3 +370,4 @@ void BaseBattleWindow::addSpectator(bool come, int id, const QString &)
         spectators.remove(id);
     }
 }
+
