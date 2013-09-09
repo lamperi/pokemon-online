@@ -16,8 +16,13 @@
 #endif
 
 #ifdef QT5
+#ifdef Q_OS_MACX
+#include "mac/MacBattleSounds.h"
+typedef MacBattleSounds BattleSoundsImpl;
+#else
 #include "qtbattlesounds.h"
 typedef QtBattleSounds BattleSoundsImpl;
+#endif Q_OS_MACX
 #else
 #include "qt4battlesounds.h"
 typedef Qt4BattleSounds BattleSoundsImpl;

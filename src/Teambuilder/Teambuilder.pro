@@ -159,6 +159,14 @@ contains(QT_VERSION, ^5\\.[0-9]\\..*) {
 
   SOURCES += qtbattlesounds.cpp 
   HEADERS += qtbattlesounds.h
+
+  macx {
+      HEADERS += mac/MacBattleSounds.h \
+                 mac/SoundDelegate.h \
+                 mac/MacCrySupport.h
+      OBJECTIVE_SOURCES += mac/MacBattleSounds.mm \
+                 mac/SoundDelegate.mm
+  }
 } else {
   QT += phonon
   QMAKE_CXXFLAGS += "-std=c++0x -U__STRICT_ANSI__"
