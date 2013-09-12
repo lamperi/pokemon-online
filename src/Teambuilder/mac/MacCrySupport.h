@@ -3,7 +3,7 @@
 
 class MacCrySupport {
 public:
-    virtual void playingFinished(int) = 0;
+    virtual void playingFinished(int,int) = 0;
 };
 
 #endif

@@ -14,7 +14,7 @@ public:
     int cryVolume();
     int musicVolume();
 
-    void playingFinished(int);
+    void playingFinished(int,int);
 
 public slots:
     void setCryVolume(int);

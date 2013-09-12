@@ -6,13 +6,14 @@
 
 @implementation SoundDelegate
 
-- (id) initWithCallback:(MacCrySupport*)callbackHandler WithId:(int)myId
+- (id) initWithCallback:(MacCrySupport*)callbackHandler WithId:(int)myId WithType:(int)myType
 {
     self = [super init];
     if (self) {
         qDebug() << "Constructed SoundDelegate with handler";
         handler = callbackHandler;
         id = myId;
+        type = myType;
     }
     return self;
 }
@@ -22,7 +23,7 @@
     qDebug() << "Calling didFinishPlaying" << sound << finishedPlaying;
     if (handler && finishedPlaying == YES) {
         qDebug() << "Calling for handler!";
-        handler->playingFinished(id);
+        handler->playingFinished(id,type);
     }
 }
 
