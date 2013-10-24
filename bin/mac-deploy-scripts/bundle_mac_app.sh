@@ -31,10 +31,13 @@ function bundle_mac_app() {
 
    if [ $app = "Pokemon-Online.app" ]
    then
-      # XXX: how to configure which qmake to use?
+      # Find QMAKE with two good fallbacks
+      QMAKE=$(grep "^QMAKE " ../src/Teambuilder/Makefile | cut -d= -f 2)
+      : ${QMAKE:=$(grep "^QMAKE " ../src/Server/Makefile | cut -d= -f 2)}
+      : ${QMAKE:=qmake}
       IMPORTS=$(qmake -query QT_INSTALL_IMPORTS)
       PLUGINS=$(qmake -query QT_INSTALL_PLUGINS)
-      if [ $IMPORTS ]
+      if [ -n "$IMPORTS" ]
       then
          mkdir -p $app/Contents/imports/Qt/labs
          cp -r $IMPORTS/Qt/labs/particles $app/Contents/imports/Qt/labs/
@@ -42,12 +45,11 @@ function bundle_mac_app() {
       else
          echo 'Could not find QML Plugins, new battle window does not work'
       fi
-      if [ $PLUGINS ]
+      if [ -n "$PLUGINS" ]
       then
-         mkdir -p $app/Contents/PlugIns
-         cp -r $PLUGINS/imageformats $app/Contents/PlugIns/
-         [ -d $PLUGINS/mediaservice ] && cp -r $PLUGINS/mediaservice $app/Contents/PlugIns/
-         [ -d $PLUGINS/phonon_backend ] && cp -r $PLUGINS/phonon_backend $app/Contents/PlugIns/
+	 echo 'Removing extra plugins'
+	 rm -rf $app/Contents/PlugIns/sqldrivers
+	 rm -rf $app/Contents/PlugIns/printsupport
       else
          echo 'Could not find Qt Plugins, sounds do not work'
       fi
